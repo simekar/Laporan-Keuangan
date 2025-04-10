@@ -361,7 +361,7 @@
 <body>
   <header>
     <h1><i class="fas fa-wallet"></i> Catatan Keuangan Harian</h1>
-    <p>Legent Industries</p>
+    <p>Kelola keuangan Anda dengan mudah</p>
   </header>
 
   <div class="container">
@@ -372,6 +372,15 @@
           <label for="tanggal"><i class="far fa-calendar-alt"></i> Tanggal</label>
           <input id="tanggal" type="date" />
         </div>
+        <div class="form-group">
+          <label for="kategori"><i class="fas fa-tags"></i> Kategori</label>
+          <select id="kategori">
+            <option value="Bank Sampah">Bank Sampah</option>
+            <option value="Pertanian">Pertanian</option>
+            <option value="Peternakan">Peternakan</option>
+          </select>
+        </div>
+
         <div class="form-group">
           <label for="jenis"><i class="fas fa-exchange-alt"></i> Jenis Transaksi</label>
           <select id="jenis">
@@ -391,6 +400,18 @@
       <div class="buttons">
         <button onclick="tambahData()" class="btn btn-primary"><i class="fas fa-save"></i> Simpan Transaksi</button>
         <button onclick="hapusSemua()" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
+      </div>
+    </div>
+
+    
+    <div class="card">
+      <h2 class="card-title"><i class="fas fa-filter"></i> Pilih Kategori</h2>
+      <div class="filter-container">
+        <select id="kategoriFilter" onchange="filterData()" class="filter-select">
+          <option value="Bank Sampah">Bank Sampah</option>
+          <option value="Pertanian">Pertanian</option>
+          <option value="Peternakan">Peternakan</option>
+        </select>
       </div>
     </div>
 
@@ -446,6 +467,7 @@
               <th>Jenis</th>
               <th>Jumlah</th>
               <th>Keterangan</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="tabelData"></tbody>
@@ -466,6 +488,15 @@
   <script>
     const tanggalInput = document.getElementById("tanggal");
     const jenisInput = document.getElementById("jenis");
+    const kategoriInput = document.getElementById("kategori");
+
+    function filterData() {
+      const semuaData = JSON.parse(localStorage.getItem("keuangan")) || [];
+      const kategori = document.getElementById("kategoriFilter").value;
+      const filtered = semuaData.filter(item => item.kategori === kategori);
+      renderTabel(filtered);
+    }
+
     const jumlahInput = document.getElementById("jumlah");
     const ketInput = document.getElementById("keterangan");
     const tabelData = document.getElementById("tabelData");
@@ -490,7 +521,9 @@
       }
       
       const item = {
+        id: Date.now(),
         tanggal: tanggalInput.value || new Date().toISOString().split('T')[0],
+        kategori: kategoriInput.value,
         jenis: jenisInput.value,
         jumlah: parseInt(jumlahInput.value),
         keterangan: ketInput.value || 'Tidak ada keterangan',
@@ -664,6 +697,7 @@
               <th>Jenis</th>
               <th>Jumlah</th>
               <th>Keterangan</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -682,100 +716,4 @@
           tr.innerHTML = `
             <td>${formattedDate}</td>
             <td>
-              <span class="badge ${item.jenis === 'Pemasukan' ? 'badge-income' : 'badge-expense'}">
-                ${item.jenis}
-              </span>
-            </td>
-            
-              Rp ${formatRupiah(item.jumlah)}
-            </td>
-            <td>${item.keterangan}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-        
-        cards.appendChild(table);
-        container.appendChild(cards);
-      });
-    }
-
-    function renderTabel(data) {
-      tabelData.innerHTML = "";
-      let masuk = 0;
-      let keluar = 0;
-
-      if (data.length === 0) {
-        emptyTransactions.style.display = "block";
-        document.querySelector("#transaksi-container table").style.display = "none";
-      } else {
-        emptyTransactions.style.display = "none";
-        document.querySelector("#transaksi-container table").style.display = "table";
-        
-        // Sort data by date (newest first)
-        data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-        
-        data.forEach(item => {
-          const row = document.createElement("tr");
-          row.className = item.jenis === "Pemasukan" ? "income" : "expense";
-          
-          const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-          });
-          
-          row.innerHTML = `
-            <td>${formattedDate}</td>
-            <td>
-              <span class="badge ${item.jenis === 'Pemasukan' ? 'badge-income' : 'badge-expense'}">
-                ${item.jenis}
-              </span>
-            </td>
-            
-<td class="amount ${item.jenis === 'Pemasukan' ? 'income' : 'expense'}">
-  Rp ${formatRupiah(item.jumlah)}
-</td>
-<td>${item.keterangan}</td>
-`;
-
-          tabelData.appendChild(row);
-
-          if (item.jenis === "Pemasukan") {
-            masuk += item.jumlah;
-          } else {
-            keluar += item.jumlah;
-          }
-        });
-
-        document.getElementById("totalMasuk").textContent = `Rp ${formatRupiah(masuk)}`;
-        document.getElementById("totalKeluar").textContent = `Rp ${formatRupiah(keluar)}`;
-        document.getElementById("saldo").textContent = `Rp ${formatRupiah(masuk - keluar)}`;
-      }
-
-      buatChartBulanan(data);
-      tampilkanDaftarTransaksi(data);
-    }
-
-    function hapusSemua() {
-      if (confirm("Yakin ingin menghapus semua data transaksi?")) {
-        localStorage.removeItem("keuangan");
-        loadData();
-      }
-    }
-
-    function filterBulan() {
-      const bulan = document.getElementById("bulanPilih").value;
-      const data = JSON.parse(localStorage.getItem("keuangan")) || [];
-
-      if (bulan === "all") {
-        renderTabel(data);
-      } else {
-        const filtered = data.filter(item => item.tanggal.slice(5, 7) === bulan);
-        renderTabel(filtered);
-      }
-    }
-
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+              <span class="badge ${item.jenis === 'Pemasukan' ? 'badge-income' : 'badge-expense'
